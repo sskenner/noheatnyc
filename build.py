@@ -29,6 +29,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
 SNAPSHOT = ROOT / "data" / "snapshot.json"
+DIGEST = ROOT / "data" / "digest.json"
 API = "https://data.cityofnewyork.us/resource/{}.json"
 PAGE_SIZE = 50000
 
@@ -623,7 +624,23 @@ def build(raw, cfg):
     (DIST / ".nojekyll").write_text("")
     if cfg.get("domain"):
         (DIST / "CNAME").write_text(cfg["domain"] + "\n")
+    write_digest(raw, buildings, today, cfg)
     print(f"Built {len(site.urls):,} pages ({len(buildings):,} buildings, {len(zips):,} ZIPs) into {DIST}")
+
+
+def write_digest(raw, buildings, today, cfg):
+    """Summary for post_bsky.py: citywide 7-day total and the buildings with the most complaints this week."""
+    week_ago = (today - dt.timedelta(days=7)).isoformat()
+    base = cfg["base_url"].rstrip("/") + "/"
+    top = sorted((b for b in buildings if b["n7"]), key=lambda b: (-b["n7"], -b["n"]))[:5]
+    digest = {
+        "built": today.isoformat(),
+        "last7": sum(to_int(r["n"]) for r in raw["daily"] if r["day"][:10] >= week_ago),
+        "top7": [{"address": b["address"], "borough": b["borough"], "n7": b["n7"], "n": b["n"],
+                  "url": base + b["path"]} for b in top],
+    }
+    DIGEST.parent.mkdir(exist_ok=True)
+    DIGEST.write_text(json.dumps(digest, indent=1), encoding="utf-8")
 
 
 def nyc_today():
