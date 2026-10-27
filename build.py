@@ -309,6 +309,11 @@ class Site:
 <link rel="canonical" href="{esc(canonical)}">
 <meta property="og:title" content="{esc(title)}">
 <meta property="og:description" content="{esc(description)}">
+<meta property="og:image" content="{esc(cfg['base_url'].rstrip('/'))}/static/share.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="{self.url('favicon.ico')}" sizes="any">
+<link rel="icon" href="{self.url('static/icon.svg')}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{self.url('static/apple-touch-icon.png')}">
 <link rel="stylesheet" href="{self.url('static/style.css')}">
 {head_scripts}{extra_head}
 </head>
@@ -587,6 +592,8 @@ def build(raw, cfg):
     if DIST.exists():
         shutil.rmtree(DIST)
     shutil.copytree(ROOT / "static", DIST / "static")
+    # browsers request /favicon.ico at the site root regardless of <link> tags
+    shutil.copy(ROOT / "static" / "favicon.ico", DIST / "favicon.ico")
     site = Site(cfg, today)
 
     build_home(site, raw, buildings, zips, cur_start, prev_same_day)
