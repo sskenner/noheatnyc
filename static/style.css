@@ -89,10 +89,17 @@ h3 { font-size: 1rem; margin: 16px 0 8px; }
 .rules, .steps { padding-left: 20px; margin: 0; }
 .rules li, .steps li { margin: 6px 0; }
 
-.search input {
+.search input, .alert input {
   width: 100%; font: inherit; padding: 12px 14px; border-radius: 8px;
   border: 1px solid var(--border); background: var(--bg); color: var(--text-primary);
 }
+.alert .row { display: flex; flex-wrap: wrap; gap: 8px; }
+.alert input { flex: 1 1 200px; width: auto; min-width: 0; }
+.alert button {
+  font: inherit; font-weight: 600; padding: 12px 20px; border: 0; border-radius: 8px; cursor: pointer;
+  background: var(--text-primary); color: var(--surface-1);
+}
+.alert .fine { margin-bottom: 0; }
 #results { list-style: none; padding: 0; margin: 8px 0 0; }
 #results li { padding: 8px 0; border-bottom: 1px solid var(--border); }
 #results li:last-child { border-bottom: 0; }

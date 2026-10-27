@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist"
 SNAPSHOT = ROOT / "data" / "snapshot.json"
 DIGEST = ROOT / "data" / "digest.json"
+COUNTS = DIST / "counts.json"
 API = "https://data.cityofnewyork.us/resource/{}.json"
 PAGE_SIZE = 50000
 
@@ -40,6 +41,7 @@ DS_BEDBUGS = "wz6d-d3jb"
 
 BOROUGHS = {"1": "Manhattan", "2": "Bronx", "3": "Brooklyn", "4": "Queens", "5": "Staten Island"}
 HEAT = "complaint_type='HEAT/HOT WATER'"
+ALERT_TAG = "bbl-"  # Buttondown tag for a building's alert subscribers, plus the BBL
 
 
 # ---------------------------------------------------------------- fetching
@@ -288,6 +290,21 @@ class Site:
                 '<p class="fine">We may earn a commission from these links. It doesn\'t change what you pay.'
                 f'{amazon}</p></aside>')
 
+    def alert_form(self, b):
+        """Buttondown sign-up that tags the subscriber with this building; email_alerts.py sends the alerts."""
+        user = self.cfg.get("buttondown_username")
+        if not user:
+            return ""
+        action = "https://buttondown.com/api/emails/embed-subscribe/" + urllib.parse.quote(user)
+        return (f'<section class="card alert" id="alerts"><h2>Get an email when {esc(b["address"])} gets new heat complaints</h2>'
+                f'<form action="{esc(action)}" method="post"><div class="row">'
+                '<input type="email" name="email" placeholder="you@example.com" autocomplete="email" required'
+                ' aria-label="Your email address"><button type="submit">Sign up</button></div>'
+                f'<input type="hidden" name="tag" value="{ALERT_TAG}{b["bbl"]}"><input type="hidden" name="embed" value="1"></form>'
+                '<p class="fine">We check every morning and email you only if tenants have filed new heat or hot-water complaints. '
+                "You'll get a confirmation email first, and every alert has an unsubscribe link. "
+                f'<a href="{self.url("privacy/")}">Privacy</a></p></section>')
+
     def page(self, path, title, description, body, extra_head=""):
         cfg = self.cfg
         canonical = cfg["base_url"].rstrip("/") + "/" + path
@@ -476,6 +493,7 @@ def build_building(site, b, cur_start):
 {stat(f"{b['prev']:,}", "all last season", "Oct–May")}
 </div>
 {split}
+{site.alert_form(b)}
 {site.ad("adsense_slot_inline")}
 <section class="card"><h2>Other conditions on record</h2><ul>{"".join(other)}</ul></section>
 <section class="card"><h2>No heat in your apartment? What to do</h2>{ACTIONS}<h3>The legal minimums</h3>{RULES}</section>
@@ -554,6 +572,13 @@ def build_home(site, raw, buildings, zips, cur_start, prev_same_day):
 
 
 def build_static_pages(site):
+    if site.cfg.get("buttondown_username"):
+        personal = ("This site has no accounts. The only personal information it asks for is your email address, if you sign up for "
+                    "alerts about a building. Sign-ups are handled by <a href=\"https://buttondown.com/legal/privacy\" rel=\"noopener\">"
+                    "Buttondown</a>, which stores your address and the buildings you follow and sends the alerts. We use it only for "
+                    "those alerts and never sell or share it. Every alert has an unsubscribe link.")
+    else:
+        personal = "This site has no accounts and doesn't ask for personal information."
     site.page("rights/", "No heat in NYC? Your rights and what to do",
               "NYC heat season rules, minimum temperatures, and how to get your landlord to fix the heat.",
               f"""<h1>No heat? Your rights in NYC</h1>
@@ -579,7 +604,7 @@ at no cost to you. As an Amazon Associate I earn from qualifying purchases.</p>
 <p>Spotted an error? Email <a href="mailto:{esc(site.cfg['contact_email'])}">{esc(site.cfg['contact_email'])}</a>.</p></section>""")
     site.page("privacy/", "Privacy policy", "What this site collects and how ads and analytics use cookies.",
               f"""<h1>Privacy policy</h1>
-<section class="card"><p>This site has no accounts and doesn't ask for personal information. Address searches run in your browser and are not sent to us.</p>
+<section class="card"><p>{personal} Address searches run in your browser and are not sent to us.</p>
 <p>The home page asks the National Weather Service (api.weather.gov) for the current Central Park temperature.</p>
 <p>We use Google AdSense to show ads and may use Google Analytics to count visits. Google and its partners use cookies to serve ads
 based on your visits to this and other sites. You can opt out of personalized ads at
@@ -611,6 +636,9 @@ def build(raw, cfg):
     index = [[b["address"], b["zip"], b["borough"][:2], b["path"], b["n"]]
              for b in sorted(buildings, key=lambda b: (-b["n"], -b["prev"]))]
     (DIST / "search.json").write_text(json.dumps(index, separators=(",", ":")), encoding="utf-8")
+    # complaint counts as of this build; email_alerts.py diffs the live copy against the next build's
+    counts = {"built": today.isoformat(), "season": cur_start.isoformat(), "n": {b["bbl"]: b["n"] for b in buildings}}
+    COUNTS.write_text(json.dumps(counts, separators=(",", ":")), encoding="utf-8")
 
     lastmod = today.isoformat()
     urls = "".join(f"<url><loc>{esc(u)}</loc><lastmod>{lastmod}</lastmod></url>" for u in site.urls)

@@ -63,6 +63,22 @@ each address linked to its building page. It needs a Bluesky **app password** sa
 - Preview the post: `python post_bsky.py --dry-run` (after a build)
 - Post right away: Actions → Build and deploy → Run workflow → tick "Post the weekly Bluesky roundup now"
 
+## Building email alerts
+
+Each building page can show a sign-up form: "Get an email when this building gets new heat complaints."
+Sign-ups go to [Buttondown](https://buttondown.com), which handles double opt-in, storage and unsubscribes.
+Each subscriber gets the tag `bbl-<BBL>` for every building they follow.
+
+Each build publishes `counts.json` (complaints per building). Before building, the workflow saves the
+live copy. After the deploy, `email_alerts.py` compares the two. For each followed building whose count went up,
+it sends one email to that building's subscribers only, so there's at most one alert per building per deploy.
+
+1. Create a Buttondown newsletter. Tags need the **Basic** plan or higher.
+2. Put its username in `config.json` → `buttondown_username`. The forms and privacy-policy text appear on the next build.
+3. Save the API key (Settings → API) as the `BUTTONDOWN_API_KEY` repository secret. Without it the job just prints the alerts.
+
+- Preview the alerts: `python email_alerts.py --save-previous`, then `python build.py`, then `python email_alerts.py --dry-run`
+
 ## Turning on revenue
 
 Edit `config.json`:
@@ -76,5 +92,5 @@ Edit `config.json`:
 ## Growth ideas
 
 - Post the weekly "worst buildings" list to neighborhood subreddits and X/Bluesky (it's on the home page and ZIP pages).
-- Add an email alert ("tell me when my building gets complaints"). A newsletter is the best way past Amazon's 3-sale rule.
+- Grow the building-alert list into a newsletter. It's the best way past Amazon's 3-sale rule.
 - Reuse the same pipeline for noise (`Noise - Residential`), rats and parking (see the strategy notes).

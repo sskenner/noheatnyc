@@ -30,6 +30,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Save the live site's complaint counts (baseline for email alerts)
+        run: python email_alerts.py --save-previous
       - name: Build site from NYC Open Data
         env:
           SOCRATA_APP_TOKEN: ${{ secrets.SOCRATA_APP_TOKEN }}
@@ -39,8 +41,12 @@ jobs:
           path: dist
       - uses: actions/upload-artifact@v4
         with:
-          name: digest
-          path: data/digest.json
+          name: build-data
+          path: |
+            data/digest.json
+            data/previous_counts.json
+            dist/counts.json
+            dist/search.json
           retention-days: 7
 
   deploy:
@@ -66,9 +72,26 @@ jobs:
           python-version: "3.12"
       - uses: actions/download-artifact@v4
         with:
-          name: digest
-          path: data
+          name: build-data
       - name: Post to Bluesky
         env:
           BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
         run: python post_bsky.py ${{ inputs.post_now && '--force' || '' }}
+
+  # Building alert emails. Runs after every deploy (not just the daily one), because
+  # each deploy moves the live counts.json that the next run diffs against.
+  alerts:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-data
+      - name: Email building alerts
+        env:
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+        run: python email_alerts.py
