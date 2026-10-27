@@ -87,6 +87,21 @@ it sends one email to that building's subscribers only, so there's at most one a
 
 - Preview the alerts: `python email_alerts.py --save-previous`, then `python build.py`, then `python email_alerts.py --dry-run`
 
+## Daily health check
+
+`.github/workflows/health.yml` runs `health_check.py` every morning at ~9:45 AM New York, after the build.
+It checks the live site: home page up, "Data updated" and `counts.json` from today, a normal building count,
+the top building's page (alert form, Amazon links carrying `amazon_tag`), the rights/about/privacy pages,
+the sitemap, the `www` redirect and the HTTPS certificate. The run's summary page lists the results and
+today's numbers (buildings, season complaints, top building, alert subscribers if `BUTTONDOWN_API_KEY` is set).
+
+Any failed check fails the run, and GitHub emails you. Make sure GitHub → Settings → Notifications → Actions
+is set to email on failed workflows. GitHub turns off scheduled workflows after 60 days without a commit, so
+push something (or re-enable them under Actions) if the emails go quiet in the spring.
+
+- Run it now: `python health_check.py`, or Actions → Daily health check → Run workflow
+- Amazon Associates clicks and earnings have no API, so check them in the Associates dashboard.
+
 ## Turning on revenue
 
 Edit `config.json`:
