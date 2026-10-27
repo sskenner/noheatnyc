@@ -4,7 +4,7 @@ Two kinds of post, both only during heat season (Oct 1 - May 31):
 
   weekly  The buildings with the most heat complaints in the past 7 days, from
           data/digest.json (written by build.py), each address linked to its page.
-          Mondays only, never twice within 6 days.
+          Mondays and Thursdays (ROUNDUP_DAYS), never twice within 2 days.
   cold    A heat-law reminder when the National Weather Service forecasts a cold
           night for Central Park (low of COLD_F or below). At most once every
           COOLDOWN_DAYS, unless tonight is SNAP_F colder than the last alert.
@@ -13,7 +13,7 @@ Needs the BSKY_APP_PASSWORD environment variable (a Bluesky app password, not th
 account password); without it, it prints the post and exits. Standard library only.
 
     python post_bsky.py weekly --dry-run   # show the post, send nothing
-    python post_bsky.py weekly --force     # post now, skipping the Monday/season/repeat checks
+    python post_bsky.py weekly --force     # post now, skipping the day/season/repeat checks
     python post_bsky.py cold --dry-run     # show tonight's forecast and what would be posted
 """
 import argparse
@@ -32,6 +32,7 @@ PDS = "https://bsky.social/xrpc/"
 LIMIT = 300  # Bluesky's post length cap (graphemes; len() over-counts only for combined emoji)
 
 WEEKLY_HEADER = "🥶 Most NYC heat complaints this past week"
+ROUNDUP_DAYS = {0: "Monday", 3: "Thursday"}  # date.weekday() numbers
 COLD_HEADER = "❄️ Cold night ahead in NYC"
 COLD_F = 40          # alert when tonight's forecast low is at or below this
 COOLDOWN_DAYS = 7    # ...and no alert went out in this many days
@@ -165,7 +166,7 @@ def main():
         digest = json.loads(DIGEST.read_text(encoding="utf-8"))
         text, facets = compose_weekly(digest, cfg["base_url"])
         header = WEEKLY_HEADER
-        skip = ("Not Monday in New York" if today.weekday() != 0 else
+        skip = (f"Roundups go out on {' and '.join(ROUNDUP_DAYS.values())}" if today.weekday() not in ROUNDUP_DAYS else
                 "No complaints this week" if not digest["top7"] else None)
     else:
         try:
@@ -195,8 +196,8 @@ def main():
     token, did = session["accessJwt"], session["did"]
     if not args.force:
         history = recent_posts(token, did, header)
-        if args.kind == "weekly" and history and (today - history[0][0]).days < 6:
-            print("Already posted this week; not posting.")
+        if args.kind == "weekly" and history and (today - history[0][0]).days < 2:
+            print(f"Already posted a roundup on {history[0][0]}; not posting.")
             return
         if args.kind == "cold" and not cold_ok(history, today, low):
             print(f"Last cold-night alert was {history[0][0]}; not posting again yet.")

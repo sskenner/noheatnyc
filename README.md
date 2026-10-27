@@ -58,7 +58,7 @@ Live at **https://noheatnyc.com** (repo `sskenner/noheatnyc`).
 The workflow posts to [@noheatnyc.com](https://bsky.app/profile/noheatnyc.com) after the morning build,
 during heat season (Oct 1 – May 31) only:
 
-- **Weekly roundup** (Mondays): the three buildings with the most heat complaints that week, each linked to its page.
+- **Roundup** (Mondays and Thursdays): the three buildings with the most heat complaints in the past 7 days, each linked to its page.
 - **Cold-night alert**: when the National Weather Service forecasts a Central Park low of 40°F or below, a reminder
   of the heat law. At most once a week, unless a night is 8°F colder than the last alert.
 
@@ -66,7 +66,7 @@ It needs a Bluesky **app password** saved as the `BSKY_APP_PASSWORD` repository 
 prints the posts.
 
 - Preview: `python post_bsky.py weekly --dry-run` (after a build) or `python post_bsky.py cold --dry-run`
-- Post the roundup right away: Actions → Build and deploy → Run workflow → tick "Post the weekly Bluesky roundup now"
+- Post the roundup right away: Actions → Build and deploy → Run workflow → tick "Post the Bluesky roundup now"
 
 ## Turning on revenue
 
