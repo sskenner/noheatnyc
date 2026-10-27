@@ -299,6 +299,8 @@ class Site:
             head_scripts += (f'<script async src="https://www.googletagmanager.com/gtag/js?id={gid}"></script>'
                              "<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}"
                              f"gtag('js',new Date());gtag('config','{gid}');</script>")
+        social = "".join(f' · <a href="{esc(s["url"])}" rel="me">{esc(s["label"])}</a>'
+                         for s in cfg.get("social", []))
         doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -326,7 +328,7 @@ class Site:
 <footer>
 <p>Data from <a href="https://opendata.cityofnewyork.us/">NYC Open Data</a> (311, HPD, DOHMH), updated {fmt_date(self.today.isoformat())}.
 311 complaints are reports from the public, not confirmed violations. This site is not affiliated with the City of New York and is not legal advice.</p>
-<p><a href="{self.url('about/')}">About &amp; disclosures</a> · <a href="{self.url('privacy/')}">Privacy</a> · <a href="mailto:{esc(cfg['contact_email'])}">Contact</a></p>
+<p><a href="{self.url('about/')}">About &amp; disclosures</a> · <a href="{self.url('privacy/')}">Privacy</a> · <a href="mailto:{esc(cfg['contact_email'])}">Contact</a>{social}</p>
 </footer>
 <script src="{self.url('static/app.js')}" defer></script>
 </body>

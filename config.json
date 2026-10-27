@@ -13,6 +13,11 @@
   "adsense_slot_inline": "",
   "ga4_id": "",
 
+  "social": [
+    {"label": "Bluesky", "url": "https://bsky.app/profile/noheatnyc.com"},
+    {"label": "Instagram", "url": "https://www.instagram.com/noheatnycdotcom/"}
+  ],
+
   "amazon_tag": "noheatnyc-20",
   "amazon_products": [
     {"label": "Indoor thermometer & humidity logger", "query": "digital thermometer hygrometer data logger", "note": "Log apartment temps as evidence for HPD"},
