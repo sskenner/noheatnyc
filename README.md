@@ -7,6 +7,9 @@ An automated static site built from NYC Open Data, in the spirit of isthelrunnin
 - **One page per building** (~11–40k, depending on the time of season) with heat and hot-water 311 complaints this season vs. last,
   open HPD violations, rat inspections and bedbug filings.
 - **One page per ZIP code** ranking its buildings, plus a "your rights" page, about, and privacy pages.
+- **One page per neighborhood** (Washington Heights – Inwood, East Flatbush – Flatbush, …) ranking the buildings across its ZIP codes.
+  The ZIP groups in `neighborhoods.json` follow the health department's 42 United Hospital Fund (UHF) neighborhoods,
+  with newer ZIPs (11249, 10065, 10075…) added and a few names spelled out. The build lists any ZIP that isn't in a neighborhood.
 - **Money:** AdSense slots, Amazon affiliate links (thermometer logger, space heater, blankets…), and slots for referral links
   (renters insurance, apartment search). These only render once you fill in `config.json`.
 
