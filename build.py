@@ -356,7 +356,7 @@ def daily_chart(daily, today):
             weeks[start] = weeks.get(start, 0) + n
         days = sorted(weeks.items())
 
-    W, H, left, right, top, bottom = 720, 240, 44, 8, 12, 28
+    W, H, left, right, top, bottom = 720, 240, 56, 8, 12, 28
     plot_w, plot_h = W - left - right, H - top - bottom
     peak = max(n for _, n in days)
     step = next(s for s in (10, 20, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 50000)
@@ -380,10 +380,12 @@ def daily_chart(daily, today):
                 f"H{x + bar - r:.1f}Q{x + bar:.1f},{y:.1f} {x + bar:.1f},{y + r:.1f}V{top + plot_h:.1f}Z")
         parts.append(f'<g class="col" data-tip="{esc(label)}"><rect class="hit" x="{left + i * slot:.1f}" y="{top}"'
                      f' width="{slot:.1f}" height="{plot_h}"/><path class="bar" d="{path}"/></g>')
+    # pin the end labels to the plot edges so they can't run off a narrow screen
+    edges = {0: (left, "start"), len(days) - 1: (W - right, "end")}
     for i in sorted({0, len(days) // 2, len(days) - 1}):
-        x = left + i * slot + slot / 2
+        x, anchor = edges.get(i, (left + i * slot + slot / 2, "middle"))
         d = dt.date.fromisoformat(days[i][0])
-        parts.append(f'<text class="tick" x="{x:.1f}" y="{H - 8}" text-anchor="middle">{d:%b} {d.day}</text>')
+        parts.append(f'<text class="tick" x="{x:.1f}" y="{H - 8}" text-anchor="{anchor}">{d:%b} {d.day}</text>')
     rows = "".join(f"<tr><td>{fmt_date(d)}</td><td>{n:,}</td></tr>" for d, n in days)
     return f"""<figure class="card chart">
 <h2>Heat &amp; hot-water complaints per {unit}, citywide</h2>
@@ -488,7 +490,7 @@ Sources: 311 Service Requests, HPD Housing Maintenance Code Violations, DOHMH Ro
 def table(site, rows, show_zip=True):
     trs = "".join(
         f'<tr><td><a href="{site.url(b["path"])}">{esc(b["address"])}</a>'
-        + (f'<span class="muted"> · {b["borough"]} {b["zip"]}</span>' if show_zip else "")
+        + (f'<span class="muted loc"><span class="sep"> · </span>{b["borough"]} {b["zip"]}</span>' if show_zip else "")
         + f'</td><td class="num">{b["n"]:,}</td><td class="num">{b["n7"]:,}</td><td class="num">{b["prev"]:,}</td></tr>'
         for b in rows)
     return ('<div class="scroll"><table class="rank"><thead><tr><th>Building</th><th class="num">This season</th>'

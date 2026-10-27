@@ -63,6 +63,7 @@ h3 { font-size: 1rem; margin: 16px 0 8px; }
 }
 .brand { font-weight: 700; color: var(--text-primary); text-decoration: none; }
 .top nav { display: flex; gap: 16px; font-size: .95rem; }
+.top nav a { padding: 10px 0; }
 
 .hero { text-align: center; padding: 32px 0 24px; }
 .hero .q { font-size: 1.15rem; color: var(--text-secondary); margin: 0; }
@@ -79,7 +80,7 @@ h3 { font-size: 1rem; margin: 16px 0 8px; }
 .muted, .fine { color: var(--text-muted); }
 .fine { font-size: .85rem; }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 16px 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
 .stat { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
 .stat .v { font-size: 2rem; font-weight: 700; line-height: 1.1; }
 .stat .l { color: var(--text-secondary); }
@@ -124,6 +125,19 @@ th { color: var(--text-secondary); font-weight: 600; }
   position: absolute; pointer-events: none; transform: translate(-50%, -110%);
   background: var(--text-primary); color: var(--surface-1); padding: 4px 8px;
   border-radius: 6px; font-size: .85rem; white-space: nowrap;
+}
+
+/* phones: the chart SVG scales down ~2x, so ticks need larger user-unit text; tables get tighter */
+@media (max-width: 560px) {
+  .top { padding: 4px 16px; }
+  .card { padding: 16px; }
+  .stat .v { font-size: 1.75rem; }
+  .chart .tick { font-size: 22px; }
+  table.rank { font-size: .9rem; }
+  table.rank th, table.rank td { padding: 8px 4px; }
+  table.rank th.num { white-space: normal; }
+  table.rank .loc { display: block; }
+  table.rank .sep { display: none; }
 }
 
 footer { max-width: 860px; margin: 0 auto; padding: 16px 16px 40px; color: var(--text-muted); font-size: .85rem; }
