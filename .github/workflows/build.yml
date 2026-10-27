@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       post_now:
-        description: "Post the weekly Bluesky roundup now (skips the Monday check)"
+        description: "Post the Bluesky roundup now (skips the Monday/Thursday check)"
         type: boolean
         default: false
   push:
@@ -59,8 +59,8 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
-  # Weekly Bluesky roundup. Runs after deploy so the linked pages are live;
-  # post_bsky.py itself only posts on Mondays in heat season, once a week.
+  # Bluesky posts. Runs after deploy so the linked pages are live; post_bsky.py
+  # decides whether to post (Mon/Thu for the roundup, cold forecasts for alerts).
   post:
     needs: deploy
     if: github.event_name == 'schedule' || inputs.post_now
@@ -73,10 +73,15 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: build-data
-      - name: Post to Bluesky
+      - name: Roundup (Mondays and Thursdays)
         env:
           BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
-        run: python post_bsky.py ${{ inputs.post_now && '--force' || '' }}
+        run: python post_bsky.py weekly ${{ inputs.post_now && '--force' || '' }}
+      - name: Cold-night alert (when the forecast low is 40°F or below)
+        if: success() || failure()
+        env:
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+        run: python post_bsky.py cold
 
   # Building alert emails. Runs after every deploy (not just the daily one), because
   # each deploy moves the live counts.json that the next run diffs against.

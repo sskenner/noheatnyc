@@ -112,6 +112,7 @@ th { color: var(--text-secondary); font-weight: 600; }
 
 .zips { columns: 2 160px; padding-left: 0; list-style: none; margin: 0; }
 .zips li { padding: 4px 0; }
+.hoods h3:first-of-type { margin-top: 0; }
 
 .shop ul { list-style: none; padding: 0; margin: 0; }
 .shop li { padding: 8px 0; border-bottom: 1px solid var(--border); }

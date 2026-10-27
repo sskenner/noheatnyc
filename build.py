@@ -31,6 +31,7 @@ DIST = ROOT / "dist"
 SNAPSHOT = ROOT / "data" / "snapshot.json"
 DIGEST = ROOT / "data" / "digest.json"
 COUNTS = DIST / "counts.json"
+NEIGHBORHOODS = ROOT / "neighborhoods.json"
 API = "https://data.cityofnewyork.us/resource/{}.json"
 PAGE_SIZE = 50000
 
@@ -233,6 +234,27 @@ def shape(raw, cfg):
         for i, b in enumerate(members):
             b["zip_rank"] = i + 1
     return buildings, zips
+
+
+def group_neighborhoods(zips):
+    """Neighborhoods (ZIP groups from neighborhoods.json) that have buildings, and a ZIP -> neighborhood lookup."""
+    hoods, by_zip = [], {}
+    for h in json.loads(NEIGHBORHOODS.read_text(encoding="utf-8")):
+        for z in h["zips"]:
+            if z in by_zip:
+                raise ValueError(f"ZIP {z} is in more than one neighborhood")
+            by_zip[z] = h
+        h["zips"] = [z for z in h["zips"] if z in zips]
+        if not h["zips"]:
+            continue
+        h["path"] = f"neighborhood/{slugify(h['name'])}/"
+        h["members"] = sorted((b for z in h["zips"] for b in zips[z]), key=lambda b: (-b["n"], -b["prev"]))
+        h["n"] = sum(b["n"] for b in h["members"])
+        hoods.append(h)
+    unplaced = sorted(z for z in zips if z not in by_zip)
+    if unplaced:
+        print(f"  ZIPs with no neighborhood: {', '.join(unplaced)}", file=sys.stderr)
+    return hoods, {z: h for h in hoods for z in h["zips"]}
 
 
 # ---------------------------------------------------------------- html helpers
@@ -464,7 +486,16 @@ def stat(value, label, sub=""):
             + (f'<div class="s">{sub}</div>' if sub else "") + "</div>")
 
 
-def build_building(site, b, cur_start):
+def crumbs(site, borough, hood=None, last=""):
+    parts = [f'<a href="{site.url()}">Home</a>', borough]
+    if hood:
+        parts.append(f'<a href="{site.url(hood["path"])}">{esc(hood["name"])}</a>')
+    if last:
+        parts.append(last)
+    return f'<p class="crumbs">{" › ".join(parts)}</p>'
+
+
+def build_building(site, b, cur_start, hood=None):
     other = []
     if b["open"]:
         other.append(f"<li><b>{plural(b['open'], 'open HPD violation')}</b>, including "
@@ -484,7 +515,7 @@ def build_building(site, b, cur_start):
         split = (f"<p>{b['whole']:,} of this season's complaints were about the <b>entire building</b>; "
                  f"{b['noheat']:,} mention no heat and {b['nohw']:,} mention no hot water.</p>")
     zip_link = (f'<a href="{site.url("zip/" + b["zip"] + "/")}">ZIP {b["zip"]}</a>' if b["zip"] else "")
-    body = f"""<p class="crumbs"><a href="{site.url()}">Home</a> › {b['borough']}{' › ' + zip_link if zip_link else ''}</p>
+    body = f"""{crumbs(site, b['borough'], hood, zip_link)}
 <h1>{esc(b['address'])}<span class="sub">{b['borough']}, NY {b['zip']}</span></h1>
 <p class="lede">{esc(building_sentence(b, cur_start))}</p>
 <div class="stats">
@@ -517,13 +548,17 @@ def table(site, rows, show_zip=True):
             f"<tbody>{trs}</tbody></table></div>")
 
 
-def build_zip(site, z, members, cur_start):
+def build_zip(site, z, members, cur_start, hood=None):
     n = sum(b["n"] for b in members)
     boro = members[0]["borough"]
-    body = f"""<p class="crumbs"><a href="{site.url()}">Home</a> › {boro} › ZIP {z}</p>
-<h1>Heat complaints in ZIP {z}<span class="sub">{boro}</span></h1>
+    part_of = ""
+    if hood:
+        part_of = (f'\n<p>Part of <a href="{site.url(hood["path"])}">{esc(hood["name"])}</a>: '
+                   f'see all {plural(len(hood["zips"]), "ZIP code")} in the neighborhood ranked together.</p>')
+    body = f"""{crumbs(site, boro, hood, f"ZIP {z}")}
+<h1>Heat complaints in ZIP {z}<span class="sub">{esc(hood["name"]) + ", " if hood else ""}{boro}</span></h1>
 <p class="lede">{plural(n, 'heat or hot-water complaint')} across {plural(sum(1 for b in members if b['n']), 'building')}
-in {z} since {fmt_date(cur_start.isoformat())}. Buildings are ranked by complaints this season.</p>
+in {z} since {fmt_date(cur_start.isoformat())}. Buildings are ranked by complaints this season.</p>{part_of}
 {site.ad("adsense_slot_inline")}
 {table(site, members[:200], show_zip=False)}
 {site.shop()}"""
@@ -532,7 +567,24 @@ in {z} since {fmt_date(cur_start.isoformat())}. Buildings are ranked by complain
     return n
 
 
-def build_home(site, raw, buildings, zips, cur_start, prev_same_day):
+def build_neighborhood(site, h, zips, cur_start):
+    name, boro = esc(h["name"]), h["borough"]
+    zip_list = "".join(
+        f'<li><a href="{site.url("zip/" + z + "/")}">{z}</a> <span class="muted">{sum(b["n"] for b in zips[z]):,}</span></li>'
+        for z in h["zips"])
+    body = f"""{crumbs(site, boro, last=name)}
+<h1>Heat complaints in {name}<span class="sub">{boro}</span></h1>
+<p class="lede">{plural(h['n'], 'heat or hot-water complaint')} across {plural(sum(1 for b in h['members'] if b['n']), 'building')}
+in {name} since {fmt_date(cur_start.isoformat())}. Buildings are ranked by complaints this season.</p>
+<section class="card"><h2>ZIP codes in {name}</h2><ul class="zips">{zip_list}</ul></section>
+{site.ad("adsense_slot_inline")}
+{table(site, h['members'][:200])}
+{site.shop()}"""
+    site.page(h["path"], f"Heat complaints in {h['name']}, {boro} – buildings ranked",
+              f"Which buildings in {h['name']} ({boro}) have the most heat and hot-water complaints this season.", body)
+
+
+def build_home(site, raw, buildings, zips, hoods, cur_start, prev_same_day):
     daily_total = sum(to_int(r["n"]) for r in raw["daily"])
     week_ago = (site.today - dt.timedelta(days=7)).isoformat()
     last7 = sum(to_int(r["n"]) for r in raw["daily"] if r["day"][:10] >= week_ago)
@@ -545,6 +597,12 @@ def build_home(site, raw, buildings, zips, cur_start, prev_same_day):
     zip_totals = sorted(((z, sum(b["n"] for b in m), m[0]["borough"]) for z, m in zips.items()), key=lambda t: -t[1])[:12]
     zip_list = "".join(f'<li><a href="{site.url("zip/" + z + "/")}">{z}</a> <span class="muted">{boro} · {n:,}</span></li>'
                        for z, n, boro in zip_totals if n)
+    hood_list = ""
+    for boro in BOROUGHS.values():
+        items = "".join(f'<li><a href="{site.url(h["path"])}">{esc(h["name"])}</a> <span class="muted">{h["n"]:,}</span></li>'
+                        for h in sorted(hoods, key=lambda h: h["name"]) if h["borough"] == boro)
+        if items:
+            hood_list += f'<h3>{boro}</h3><ul class="zips">{items}</ul>'
     body = f"""<section class="hero" id="answer" data-season-start="10-01" data-season-end="05-31">
 <p class="q">{esc(site.cfg['tagline'])}</p>
 <p class="a" aria-live="polite">…</p>
@@ -564,6 +622,7 @@ def build_home(site, raw, buildings, zips, cur_start, prev_same_day):
 {daily_chart(raw["daily"], site.today)}
 <section class="card"><h2>Most complaints this season</h2>{table(site, top)}</section>
 <section class="card"><h2>ZIP codes with the most complaints</h2><ul class="zips">{zip_list}</ul></section>
+<section class="card hoods"><h2>Neighborhoods</h2>{hood_list}</section>
 <section class="card"><h2>The rules</h2>{RULES}<p><a href="{site.url('rights/')}">What to do if your heat is off →</a></p></section>
 {site.shop()}"""
     site.page("", f"{site.cfg['site_name']}: is heat required right now?",
@@ -618,6 +677,7 @@ def build(raw, cfg):
     today = dt.date.fromisoformat(raw["built"])
     cur_start, _, _, prev_same_day = seasons(today)
     buildings, zips = shape(raw, cfg)
+    hoods, hood_of = group_neighborhoods(zips)
 
     if DIST.exists():
         shutil.rmtree(DIST)
@@ -626,12 +686,14 @@ def build(raw, cfg):
     shutil.copy(ROOT / "static" / "favicon.ico", DIST / "favicon.ico")
     site = Site(cfg, today)
 
-    build_home(site, raw, buildings, zips, cur_start, prev_same_day)
+    build_home(site, raw, buildings, zips, hoods, cur_start, prev_same_day)
     build_static_pages(site)
     for b in buildings:
-        build_building(site, b, cur_start)
+        build_building(site, b, cur_start, hood_of.get(b["zip"]))
     for z, members in zips.items():
-        build_zip(site, z, members, cur_start)
+        build_zip(site, z, members, cur_start, hood_of.get(z))
+    for h in hoods:
+        build_neighborhood(site, h, zips, cur_start)
 
     index = [[b["address"], b["zip"], b["borough"][:2], b["path"], b["n"]]
              for b in sorted(buildings, key=lambda b: (-b["n"], -b["prev"]))]
@@ -653,7 +715,8 @@ def build(raw, cfg):
     if cfg.get("domain"):
         (DIST / "CNAME").write_text(cfg["domain"] + "\n")
     write_digest(raw, buildings, today, cfg)
-    print(f"Built {len(site.urls):,} pages ({len(buildings):,} buildings, {len(zips):,} ZIPs) into {DIST}")
+    print(f"Built {len(site.urls):,} pages ({len(buildings):,} buildings, {len(zips):,} ZIPs,"
+          f" {len(hoods):,} neighborhoods) into {DIST}")
 
 
 def write_digest(raw, buildings, today, cfg):
