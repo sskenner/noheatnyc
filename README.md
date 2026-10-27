@@ -53,15 +53,20 @@ Live at **https://noheatnyc.com** (repo `sskenner/noheatnyc`).
 `domain`, `base_url` and `base_path` in `config.json` control the canonical URLs, the sitemap and the `CNAME` file.
 `.github/workflows/build.yml` rebuilds every morning and redeploys.
 
-## Weekly Bluesky post
+## Bluesky posts
 
-Every Monday in heat season (Oct 1 – May 31), after the morning build, the workflow posts the
-three buildings with the most heat complaints that week to [@noheatnyc.com](https://bsky.app/profile/noheatnyc.com),
-each address linked to its building page. It needs a Bluesky **app password** saved as the
-`BSKY_APP_PASSWORD` repository secret; without it the job just prints the post.
+The workflow posts to [@noheatnyc.com](https://bsky.app/profile/noheatnyc.com) after the morning build,
+during heat season (Oct 1 – May 31) only:
 
-- Preview the post: `python post_bsky.py --dry-run` (after a build)
-- Post right away: Actions → Build and deploy → Run workflow → tick "Post the weekly Bluesky roundup now"
+- **Weekly roundup** (Mondays): the three buildings with the most heat complaints that week, each linked to its page.
+- **Cold-night alert**: when the National Weather Service forecasts a Central Park low of 40°F or below, a reminder
+  of the heat law. At most once a week, unless a night is 8°F colder than the last alert.
+
+It needs a Bluesky **app password** saved as the `BSKY_APP_PASSWORD` repository secret; without it the job just
+prints the posts.
+
+- Preview: `python post_bsky.py weekly --dry-run` (after a build) or `python post_bsky.py cold --dry-run`
+- Post the roundup right away: Actions → Build and deploy → Run workflow → tick "Post the weekly Bluesky roundup now"
 
 ## Turning on revenue
 

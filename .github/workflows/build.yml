@@ -53,8 +53,8 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v4
 
-  # Weekly Bluesky roundup. Runs after deploy so the linked pages are live;
-  # post_bsky.py itself only posts on Mondays in heat season, once a week.
+  # Bluesky posts. Runs after deploy so the linked pages are live; post_bsky.py
+  # decides whether to post (Mondays for the roundup, cold forecasts for alerts).
   post:
     needs: deploy
     if: github.event_name == 'schedule' || inputs.post_now
@@ -68,7 +68,12 @@ jobs:
         with:
           name: digest
           path: data
-      - name: Post to Bluesky
+      - name: Weekly roundup (Mondays)
         env:
           BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
-        run: python post_bsky.py ${{ inputs.post_now && '--force' || '' }}
+        run: python post_bsky.py weekly ${{ inputs.post_now && '--force' || '' }}
+      - name: Cold-night alert (when the forecast low is 40°F or below)
+        if: success() || failure()
+        env:
+          BSKY_APP_PASSWORD: ${{ secrets.BSKY_APP_PASSWORD }}
+        run: python post_bsky.py cold
