@@ -281,8 +281,11 @@ class Site:
                              f'{esc(r["label"])}</a><span>{esc(r["note"])}</span></li>')
         if not items:
             return ""
+        # Amazon's Operating Agreement requires this exact sentence wherever Associates links appear
+        amazon = " As an Amazon Associate I earn from qualifying purchases." if tag else ""
         return (f'<aside class="card shop"><h2>{esc(heading)}</h2><ul>{"".join(items)}</ul>'
-                '<p class="fine">We may earn a commission from these links. It doesn\'t change what you pay.</p></aside>')
+                '<p class="fine">We may earn a commission from these links. It doesn\'t change what you pay.'
+                f'{amazon}</p></aside>')
 
     def page(self, path, title, description, body, extra_head=""):
         cfg = self.cfg
@@ -562,7 +565,7 @@ It is independent and not affiliated with the City of New York.</p>
 One outage often produces many reports from the same building.</p>
 <h2>How the site is funded</h2>
 <p>The site shows ads and includes affiliate links (for example to Amazon). If you buy through one, we may earn a commission
-at no cost to you. As an Amazon Associate we earn from qualifying purchases.</p>
+at no cost to you. As an Amazon Associate I earn from qualifying purchases.</p>
 <p>Spotted an error? Email <a href="mailto:{esc(site.cfg['contact_email'])}">{esc(site.cfg['contact_email'])}</a>.</p></section>""")
     site.page("privacy/", "Privacy policy", "What this site collects and how ads and analytics use cookies.",
               f"""<h1>Privacy policy</h1>
