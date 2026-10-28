@@ -2,7 +2,7 @@ name: Build and deploy
 
 on:
   schedule:
-    - cron: "15 11 * * *"   # daily, ~7 AM New York, after 311 data refreshes overnight
+    - cron: "23 11 * * *"   # daily, ~7 AM New York, after 311 data refreshes overnight
   workflow_dispatch:
     inputs:
       post_now:

@@ -4,7 +4,7 @@ name: Daily health check
 # HTTPS. A failed run emails you (GitHub → Settings → Notifications → Actions).
 on:
   schedule:
-    - cron: "45 13 * * *"   # ~9:45 AM New York, 2.5 h after the build starts
+    - cron: "53 13 * * *"   # ~9:53 AM New York, 2.5 h after the build starts
   workflow_dispatch:
 
 permissions:
