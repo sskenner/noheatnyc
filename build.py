@@ -45,6 +45,12 @@ HEAT = "complaint_type='HEAT/HOT WATER'"
 ALERT_TAG = "bbl-"  # Buttondown tag for a building's alert subscribers, plus the BBL
 
 
+def is_thin(b):
+    """Too little data to be worth a search result: kept on the site, but noindexed and left out of the sitemap,
+    so Google (and AdSense review) judge the site by its substantive pages."""
+    return b["n"] < 3 and b["prev"] < 10 and b["open"] < 5 and not b["rat_activity"]
+
+
 # ---------------------------------------------------------------- fetching
 
 def soql(dataset, params):
@@ -327,7 +333,7 @@ class Site:
                 "You'll get a confirmation email first, and every alert has an unsubscribe link. "
                 f'<a href="{self.url("privacy/")}">Privacy</a></p></section>')
 
-    def page(self, path, title, description, body, extra_head=""):
+    def page(self, path, title, description, body, extra_head="", index=True):
         cfg = self.cfg
         canonical = cfg["base_url"].rstrip("/") + "/" + path
         head_scripts = ""
@@ -357,7 +363,7 @@ class Site:
 <link rel="icon" href="{self.url('static/icon.svg')}" type="image/svg+xml">
 <link rel="apple-touch-icon" href="{self.url('static/apple-touch-icon.png')}">
 <link rel="stylesheet" href="{self.url('static/style.css')}">
-{head_scripts}{extra_head}
+{head_scripts}{extra_head}{"" if index else '<meta name="robots" content="noindex,follow">'}
 </head>
 <body data-base="{self.base}">
 <header class="top"><a class="brand" href="{self.url()}">{esc(cfg['site_name'])}</a>
@@ -377,7 +383,8 @@ class Site:
         out = DIST / path / "index.html" if not path.endswith(".html") else DIST / path
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(doc, encoding="utf-8")
-        self.urls.append(canonical)
+        if index:
+            self.urls.append(canonical)
 
 
 # ---------------------------------------------------------------- chart
@@ -534,7 +541,7 @@ Sources: 311 Service Requests, HPD Housing Maintenance Code Violations, DOHMH Ro
     title = f"{b['address']}, {b['borough']}: heat complaints & building report"
     desc = (f"{b['address']} ({b['borough']} {b['zip']}): {b['n']:,} heat/hot-water complaints this season, "
             f"{b['prev']:,} last season, {b['open']:,} open HPD violations.")
-    site.page(b["path"], title, desc, body)
+    site.page(b["path"], title, desc, body, index=not is_thin(b))
 
 
 def table(site, rows, show_zip=True):
@@ -715,8 +722,9 @@ def build(raw, cfg):
     if cfg.get("domain"):
         (DIST / "CNAME").write_text(cfg["domain"] + "\n")
     write_digest(raw, buildings, today, cfg)
-    print(f"Built {len(site.urls):,} pages ({len(buildings):,} buildings, {len(zips):,} ZIPs,"
-          f" {len(hoods):,} neighborhoods) into {DIST}")
+    thin = sum(1 for b in buildings if is_thin(b))
+    print(f"Built {len(buildings):,} buildings ({thin:,} thin, noindexed), {len(zips):,} ZIPs and"
+          f" {len(hoods):,} neighborhoods into {DIST}; {len(site.urls):,} pages in the sitemap")
 
 
 def write_digest(raw, buildings, today, cfg):
