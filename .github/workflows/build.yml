@@ -113,4 +113,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api -X PUT "repos/${{ github.repository }}/actions/workflows/build.yml/enable"
+          for wf in build.yml health.yml; do
+            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/$wf/enable"
+          done
