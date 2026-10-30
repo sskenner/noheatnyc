@@ -345,6 +345,9 @@ class Site:
             head_scripts += (f'<script async src="https://www.googletagmanager.com/gtag/js?id={gid}"></script>'
                              "<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}"
                              f"gtag('js',new Date());gtag('config','{gid}');</script>")
+        if cfg.get("cf_beacon_token"):
+            head_scripts += ("<script defer src=\"https://static.cloudflareinsights.com/beacon.min.js\" "
+                     f"data-cf-beacon='{{\"token\": \"{esc(cfg['cf_beacon_token'])}\"}}'></script>")
         social = "".join(f' · <a href="{esc(s["url"])}" rel="me">{esc(s["label"])}</a>'
                          for s in cfg.get("social", []))
         doc = f"""<!doctype html>
@@ -676,6 +679,7 @@ at no cost to you. As an Amazon Associate I earn from qualifying purchases.</p>
 based on your visits to this and other sites. You can opt out of personalized ads at
 <a href="https://adssettings.google.com" rel="noopener">Google Ad Settings</a> or <a href="https://www.aboutads.info" rel="noopener">aboutads.info</a>.
 See <a href="https://policies.google.com/technologies/partner-sites" rel="noopener">how Google uses data from partner sites</a>.</p>
+<p>We count visits with <a href="https://www.cloudflare.com/web-analytics/" rel="noopener">Cloudflare Web Analytics</a>, which doesn't use cookies or track individual visitors.</p>
 <p>Affiliate links may set cookies on the retailer's site so the purchase can be credited.</p>
 <p>Questions: <a href="mailto:{esc(site.cfg['contact_email'])}">{esc(site.cfg['contact_email'])}</a>. Last updated {fmt_date(site.today.isoformat())}.</p></section>""")
 

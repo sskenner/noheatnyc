@@ -24,6 +24,8 @@
   ],
 
   "amazon_tag": "noheatnyc-20",
+
+  "cf_beacon_token": "a5227e79991b4ec2834e9045b6a06528",
   "amazon_products": [
     {"label": "Indoor thermometer & humidity logger", "query": "digital thermometer hygrometer data logger", "note": "Log apartment temps as evidence for HPD"},
     {"label": "Oil-filled space heater", "query": "oil filled radiator space heater tip over", "note": "Safer than coil heaters; never use an extension cord"},
