@@ -20,6 +20,4 @@ jobs:
         with:
           python-version: "3.12"
       - name: Check noheatnyc.com
-        env:
-          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
         run: python health_check.py

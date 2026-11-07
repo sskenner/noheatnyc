@@ -73,6 +73,12 @@ prints the posts.
 
 ## Building email alerts
 
+**Turned off in November 2026.** The alerts rely on Buttondown tags, which aren't in Buttondown's free tier
+(they're the $9/month "Tagging & segmentation" add-on). `buttondown_username` is now empty, so no sign-up forms
+or Buttondown privacy text are built, and the workflow no longer runs `email_alerts.py`. To turn the alerts back on,
+set `buttondown_username` again and restore the `--save-previous` step, the `previous_counts.json` artifact path and
+the `alerts` job in `build.yml`, plus `BUTTONDOWN_API_KEY` in `health.yml` (all removed in the commit that added this note).
+
 Each building page can show a sign-up form: "Get an email when this building gets new heat complaints."
 Sign-ups go to [Buttondown](https://buttondown.com), which handles double opt-in, storage and unsubscribes.
 Each subscriber gets the tag `bbl-<BBL>` for every building they follow.
