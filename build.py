@@ -333,7 +333,8 @@ class Site:
                 "You'll get a confirmation email first, and every alert has an unsubscribe link. "
                 f'<a href="{self.url("privacy/")}">Privacy</a></p></section>')
 
-    def page(self, path, title, description, body, extra_head="", index=True):
+    def page(self, path, title, description, body, extra_head="", index=True, lastmod=None):
+        """lastmod: ISO date the page's data last really changed, for the sitemap (None = leave it out)."""
         cfg = self.cfg
         canonical = cfg["base_url"].rstrip("/") + "/" + path
         head_scripts = ""
@@ -387,7 +388,7 @@ class Site:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(doc, encoding="utf-8")
         if index:
-            self.urls.append(canonical)
+            self.urls.append((canonical, lastmod))
 
 
 # ---------------------------------------------------------------- chart
@@ -544,7 +545,7 @@ Sources: 311 Service Requests, HPD Housing Maintenance Code Violations, DOHMH Ro
     title = f"{b['address']}, {b['borough']}: heat complaints & building report"
     desc = (f"{b['address']} ({b['borough']} {b['zip']}): {b['n']:,} heat/hot-water complaints this season, "
             f"{b['prev']:,} last season, {b['open']:,} open HPD violations.")
-    site.page(b["path"], title, desc, body, index=not is_thin(b))
+    site.page(b["path"], title, desc, body, index=not is_thin(b), lastmod=changed([b], cur_start))
 
 
 def table(site, rows, show_zip=True):
@@ -556,6 +557,12 @@ def table(site, rows, show_zip=True):
     return ('<div class="scroll"><table class="rank"><thead><tr><th>Building</th><th class="num">This season</th>'
             '<th class="num">Last 7 days</th><th class="num">Last season</th></tr></thead>'
             f"<tbody>{trs}</tbody></table></div>")
+
+
+def changed(members, cur_start):
+    """Sitemap lastmod for a page listing these buildings: the newest complaint on it, or the season start
+    (when 'this season' text reset) if none since. Rank and 7-day shifts alone don't count as a change."""
+    return max([cur_start.isoformat()] + [b["last"] for b in members if b["last"]])
 
 
 def build_zip(site, z, members, cur_start, hood=None):
@@ -573,7 +580,8 @@ in {z} since {fmt_date(cur_start.isoformat())}. Buildings are ranked by complain
 {table(site, members[:200], show_zip=False)}
 {site.shop()}"""
     site.page(f"zip/{z}/", f"Heat complaints in {z} ({boro}) – buildings ranked",
-              f"Which buildings in ZIP {z} have the most heat and hot-water complaints this season.", body)
+              f"Which buildings in ZIP {z} have the most heat and hot-water complaints this season.", body,
+              lastmod=changed(members, cur_start))
     return n
 
 
@@ -591,7 +599,8 @@ in {name} since {fmt_date(cur_start.isoformat())}. Buildings are ranked by compl
 {table(site, h['members'][:200])}
 {site.shop()}"""
     site.page(h["path"], f"Heat complaints in {h['name']}, {boro} – buildings ranked",
-              f"Which buildings in {h['name']} ({boro}) have the most heat and hot-water complaints this season.", body)
+              f"Which buildings in {h['name']} ({boro}) have the most heat and hot-water complaints this season.", body,
+              lastmod=changed(h["members"], cur_start))
 
 
 def build_home(site, raw, buildings, zips, hoods, cur_start, prev_same_day):
@@ -637,7 +646,7 @@ def build_home(site, raw, buildings, zips, hoods, cur_start, prev_same_day):
 {site.shop()}"""
     site.page("", f"{site.cfg['site_name']}: is heat required right now?",
               "Live answer to whether NYC landlords must provide heat right now, plus heat-complaint history for every building.",
-              body)
+              body, lastmod=site.today.isoformat())  # citywide totals really do change daily
 
 
 def build_static_pages(site):
@@ -713,8 +722,7 @@ def build(raw, cfg):
     counts = {"built": today.isoformat(), "season": cur_start.isoformat(), "n": {b["bbl"]: b["n"] for b in buildings}}
     COUNTS.write_text(json.dumps(counts, separators=(",", ":")), encoding="utf-8")
 
-    lastmod = today.isoformat()
-    urls = "".join(f"<url><loc>{esc(u)}</loc><lastmod>{lastmod}</lastmod></url>" for u in site.urls)
+    urls = "".join(f"<url><loc>{esc(u)}</loc>{f'<lastmod>{m}</lastmod>' if m else ''}</url>" for u, m in site.urls)
     (DIST / "sitemap.xml").write_text(
         f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>',
         encoding="utf-8")
